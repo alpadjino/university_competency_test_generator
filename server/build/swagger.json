@@ -626,6 +626,31 @@
 				"parameters": []
 			}
 		},
+		"/tests/{testId}/delete": {
+			"delete": {
+				"operationId": "Delete",
+				"responses": {
+					"204": {
+						"description": "No content"
+					}
+				},
+				"tags": [
+					"Tests"
+				],
+				"security": [],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "testId",
+						"required": true,
+						"schema": {
+							"format": "double",
+							"type": "number"
+						}
+					}
+				]
+			}
+		},
 		"/tests/{testId}/questions/list": {
 			"get": {
 				"operationId": "List",

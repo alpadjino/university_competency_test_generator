@@ -1,8 +1,9 @@
-import { Body, Controller, Get, Path, Post, Route, Tags } from "tsoa";
+import { Body, Controller, Delete, Get, Path, Post, Route, Tags } from "tsoa";
 import { SetCompetenciesRequest, SetDescriptionRequest, SetTitleRequest, TestViewModel } from "../views/Tests";
 import { Test } from "../models/Tests";
 import { TestStatusEnum } from "../models/enums/TestStatus";
 import { TestRepository } from "../repositories/TestRepository";
+import { Question } from "../models/Agent";
 
 @Route("tests")
 @Tags("Tests")
@@ -77,7 +78,7 @@ export class TestsController extends Controller {
       const updatedTest = await this.testRepository.attachCompetency(testId, body.competenciesId);
       return updatedTest.toJSON();
     }
-    catch(err) {
+    catch (err) {
       throw new Error((err as Error).message, (err as Error));
     }
   }
@@ -98,10 +99,10 @@ export class TestsController extends Controller {
       const updatedTest = await this.testRepository.deleteCompetency(testId, body.competenciesId);
       return updatedTest.toJSON();
     }
-    catch(err) {
+    catch (err) {
       throw new Error((err as Error).message, (err as Error));
     }
-  }  
+  }
 
   @Post("create")
   public async create(): Promise<TestViewModel> {
@@ -121,6 +122,26 @@ export class TestsController extends Controller {
   @Get("list")
   public async list(): Promise<TestViewModel[]> {
     return Test.findAll();
+  }
+
+  @Delete("{testId}/delete")
+  public async delete(
+    @Path() testId: number,
+  ): Promise<void> {
+    const test = await Test.findByPk(testId);
+
+    if (!test) {
+      this.setStatus(404);
+      throw new Error("Тест не найден");
+    }
+
+    await test.setCompetencies([]);
+
+    await Question.destroy({ where: { testId: testId } });
+
+    await test.destroy();
+
+    this.setStatus(204);
   }
 
   // @Post("upload-document")

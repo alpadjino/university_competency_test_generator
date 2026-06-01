@@ -1,4 +1,4 @@
-import { BelongsToManyAddAssociationMixin, BelongsToManyRemoveAssociationMixin, DataTypes, Model, Optional } from "sequelize";
+import { BelongsToManyAddAssociationMixin, BelongsToManyRemoveAssociationMixin, BelongsToManySetAssociationsMixin, DataTypes, Model, Optional } from "sequelize";
 import { db } from "../config/db";
 import { TestStatusEnum, TestStatusEnumModel } from "./enums/TestStatus";
 import { Competencies } from "./Competencies";
@@ -22,6 +22,7 @@ export class Test extends Model<TestAttributes, TestCreationAttributes> implemen
 
   declare addCompetency: BelongsToManyAddAssociationMixin<Competencies, number>;
   declare removeCompetency: BelongsToManyRemoveAssociationMixin<Competencies, number>;
+  declare setCompetencies: BelongsToManySetAssociationsMixin<Competencies, number>;
 }
 
 Test.init(

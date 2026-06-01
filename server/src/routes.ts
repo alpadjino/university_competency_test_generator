@@ -378,6 +378,36 @@ export function RegisterRoutes(app: Router) {
             }
         });
         // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsTestsController_delete: Record<string, TsoaRoute.ParameterSchema> = {
+                testId: {"in":"path","name":"testId","required":true,"dataType":"double"},
+        };
+        app.delete('/api/tests/:testId/delete',
+            ...(fetchMiddlewares<RequestHandler>(TestsController)),
+            ...(fetchMiddlewares<RequestHandler>(TestsController.prototype.delete)),
+
+            async function TestsController_delete(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsTestsController_delete, request, response });
+
+                const controller = new TestsController();
+
+              await templateService.apiHandler({
+                methodName: 'delete',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
         const argsQuestionsController_list: Record<string, TsoaRoute.ParameterSchema> = {
                 testId: {"in":"path","name":"testId","required":true,"dataType":"double"},
         };

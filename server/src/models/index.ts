@@ -1,5 +1,6 @@
 import { Competencies } from "./Competencies";
 import { Test } from "./Tests";
+import { Question } from "./Agent";
 
 Competencies.belongsToMany(Test, {
   through: 'test_competencies',
@@ -15,4 +16,11 @@ Test.belongsToMany(Competencies, {
   as: { singular: 'competency', plural: 'competencies' },
   timestamps: false,
 });
+
+Test.hasMany(Question, { 
+  foreignKey: 'testId', 
+  onDelete: 'CASCADE',
+  hooks: true
+});
+
 

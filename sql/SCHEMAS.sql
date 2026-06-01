@@ -20,6 +20,7 @@ CREATE TABLE questions (
     subtype question_subtype NOT NULL,
     standard_answer TEXT,
     order INTEGER NOT NULL,
+    options JSONB,
 
     CONSTRAINT fk_test
         FOREIGN KEY(test_id) 

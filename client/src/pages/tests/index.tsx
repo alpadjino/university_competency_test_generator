@@ -5,6 +5,7 @@ import {
   Plus,
   FileText,
   Zap,
+  Trash2Icon,
 } from 'lucide-react';
 
 import { Button } from "@/components/ui/button";
@@ -74,13 +75,24 @@ export default function TestsPage() {
       })
   };
 
+  const handleDeleteTest = async (testId: number) => {
+    if (tests) {
+      await api.delete(`/tests/${testId}/delete`)
+        .then(() => {
+          setTests(prev => prev && prev.filter((test) => test.id !== testId))
+          toast("Тест удален.");
+        })
+        .catch(() => toast("Ошибка при удалении теста"));
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const config: Record<string, { label: string, variant: "default" | "secondary" | "outline" | "success" }> = {
       in_progress: { label: 'В прогрессе', variant: 'outline' },
       completed: { label: 'Завершено', variant: 'default' }
     };
     const current = config[status] || config.in_progress;
-// /tests/create/9/upload-documents
+    // /tests/create/9/upload-documents
     return (
       <Badge variant={'ghost'} className={status === 'completed' ? "bg-green-100 text-green-800 hover:bg-green-100 border-none" : ""}>
         {current.label}
@@ -137,6 +149,7 @@ export default function TestsPage() {
               <TableHead className="font-semibold">Ответственный</TableHead>
               <TableHead className="font-semibold">Срок</TableHead>
               <TableHead className="font-semibold text-right">Статус</TableHead>
+              <TableHead className="font-semibold text-right">{/* Удаление */}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -179,6 +192,16 @@ export default function TestsPage() {
                 </TableCell>
                 <TableCell className="text-right">
                   {getStatusBadge(test.status)}
+                </TableCell>
+                <TableCell
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    await handleDeleteTest(test.id);
+                  }}
+                >
+                  <div className='flex w-full justify-end'>
+                    <Trash2Icon />
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
