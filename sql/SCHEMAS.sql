@@ -8,7 +8,7 @@ CREATE TABLE competencies (
 
 CREATE TYPE question_category AS ENUM ('A', 'B', 'C');
 CREATE TYPE question_type AS ENUM ('Closed', 'Open');
-CREATE TYPE question_subtype AS ENUM ('Multiple', 'Matching', 'CorrectSequence', 'Addition', 'DetailedAnswer');
+CREATE TYPE question_subtype AS ENUM ('One', 'Multiple', 'Matching', 'CorrectSequence', 'Addition', 'DetailedAnswer');
 
 CREATE TABLE questions (
     id SERIAL PRIMARY KEY,
