@@ -1,0 +1,151 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum QuestionCategory {
+  A
+  B
+  C
+
+  @@map("question_category")
+}
+
+enum QuestionType {
+  Closed
+  Open
+
+  @@map("question_type")
+}
+
+enum QuestionSubtype {
+  One
+  Multiple
+  Matching
+  CorrectSequence
+  Addition
+  DetailedAnswer
+
+  @@map("question_subtype")
+}
+
+enum TestStatus {
+  in_progress
+  done
+
+  @@map("test_status")
+}
+
+enum UserRole {
+  admin
+  moderator
+  viewer
+
+  @@map("user_role")
+}
+
+enum GenerationStatus {
+  queued
+  generating
+  completed
+  failed
+
+  @@map("generation_status")
+}
+
+model Competency {
+  id          Int    @id @default(autoincrement())
+  name        String @unique
+  description String
+
+  tests TestCompetency[]
+
+  @@map("competencies")
+}
+
+model Test {
+  id          Int        @id @default(autoincrement())
+  name        String
+  description String
+  status      TestStatus @default(in_progress)
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  files       String[]
+
+  questions       Question[]
+  competencies    TestCompetency[]
+  generationTasks GenerationTask[]
+
+  @@map("tests")
+}
+
+model Question {
+  id             Int              @id @default(autoincrement())
+  testId         Int?             @map("test_id")
+  text           String
+  question       String
+  category       QuestionCategory
+  questionType   QuestionType     @map("type")
+  subtype        QuestionSubtype
+  standardAnswer String?          @map("standard_answer")
+  order            Int               @map("order")
+  options          Json?
+  generationStatus GenerationStatus? @map("generation_status")
+
+  test            Test?            @relation(fields: [testId], references: [id], onDelete: Cascade)
+  questionOptions QuestionOption[]
+  generationTask  GenerationTask?
+
+  @@map("questions")
+}
+
+model QuestionOption {
+  id         Int     @id @default(autoincrement())
+  questionId Int?    @map("question_id")
+  text       String
+  isTrue     Boolean @default(false) @map("is_true")
+
+  question Question? @relation(fields: [questionId], references: [id])
+
+  @@map("question_options")
+}
+
+model TestCompetency {
+  testId       Int @map("test_id")
+  competencyId Int @map("competency_id")
+
+  test       Test       @relation(fields: [testId], references: [id])
+  competency Competency @relation(fields: [competencyId], references: [id])
+
+  @@id([testId, competencyId])
+  @@map("test_competencies")
+}
+
+model GenerationTask {
+  id           Int              @id @default(autoincrement())
+  questionId   Int              @unique @map("question_id")
+  testId       Int              @map("test_id")
+  promptText   String           @map("prompt_text")
+  status       GenerationStatus @default(queued)
+  errorMessage String?          @map("error_message")
+  createdAt    DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  test     Test     @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  @@map("generation_tasks")
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  username     String   @unique
+  passwordHash String   @map("password_hash")
+  role         UserRole @default(viewer)
+
+  @@map("users")
+}

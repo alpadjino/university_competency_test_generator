@@ -9,6 +9,8 @@ services:
       POSTGRES_DB: diplom_db
     ports:
       - "5432:5432"
+    networks:
+      - diplom_net
 
   server:
     build: ./server
@@ -16,7 +18,6 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - OLLAMA_API_URL=http://ollama:11434
       - DATABASE_URL=postgres://user:password@db:5432/diplom_db
       - JWT_SECRET=secret_key
       - PORT=5000
@@ -25,7 +26,25 @@ services:
       - /app/node_modules
     depends_on:
       - db
+    networks:
+      - diplom_net
+
+  worker:
+    build: ./worker
+    container_name: diplom_worker
+    environment:
+      OLLAMA_API_URL: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-hodza/cotype-nano-1.5-unofficial}
+      DATABASE_URL: postgres://user:password@db:5432/diplom_db
+      WORKER_POLL_INTERVAL_MS: ${WORKER_POLL_INTERVAL_MS:-3000}
+    volumes:
+      - ./worker:/app
+      - /app/node_modules
+    depends_on:
+      - db
       - ollama
+    networks:
+      - diplom_net
 
   client:
     build: ./client
@@ -39,16 +58,27 @@ services:
       - server
     stdin_open: true
     tty: true
-  
+    networks:
+      - diplom_net
+
   ollama:
     image: ollama/ollama
     container_name: diplom-ollama-llm
     ports:
       - "11434:11434"
+    environment:
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-hodza/cotype-nano-1.5-unofficial}
     volumes:
       - ollama-data:/root/.ollama
     entrypoint: /bin/sh
-    command: -c "ollama serve & sleep 5 && ollama pull hodza/cotype-nano-1.5-unofficial && wait"
+    command: -c "ollama serve & sleep 5 && ollama pull \"$$OLLAMA_MODEL\" && wait"
+    networks:
+      - diplom_net
+
+networks:
+  diplom_net:
+    name: diplom_net
+    driver: bridge
 
 volumes:
   postgres_data:

@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Patch, Path, Route, Tags } from "tsoa";
 import { Question, QuestionOptionsDb } from '../models/Agent';
-import { ClosedQuestionSubtype, OpenQuestionSubtype, QuestionCategory, QuestionType } from "../views/Agent";
+import { ClosedQuestionSubtype, OpenQuestionSubtype, QuestionCategory, QuestionType, GenerationStatus } from "../views/Agent";
 
 export type QuestionsGeneratedResponse = {
   id: number;
@@ -12,6 +12,8 @@ export type QuestionsGeneratedResponse = {
   question: string;
   standardAnswer: string | null;
   testId: number;
+  order: number;
+  generationStatus: GenerationStatus | null;
 };
 
 export type QuestionsGeneratedListResponse = Array<QuestionsGeneratedResponse>;
@@ -26,7 +28,8 @@ export class QuestionsController extends Controller {
   ): Promise<QuestionsGeneratedListResponse> {
     try {
       const questions = await Question.findAll({
-        where: { testId: testId }
+        where: { testId: testId },
+        order: [['order', 'ASC']],
       });
 
       this.setStatus(200);
