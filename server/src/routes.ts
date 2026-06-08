@@ -8,6 +8,8 @@ import { TestsController } from './controllers/TestsController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { QuestionsController } from './controllers/QuestionsController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+import { GenerationTasksController } from './controllers/GenerationTasksController';
+// WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { CompetenciesController } from './controllers/CompetenciesController';
 // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
 import { AuthController } from './controllers/AuthController';
@@ -121,6 +123,16 @@ const models: TsoaRoute.Models = {
     "QuestionsGeneratedListResponse": {
         "dataType": "refAlias",
         "type": {"dataType":"array","array":{"dataType":"refAlias","ref":"QuestionsGeneratedResponse"},"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "GenerationTaskResponse": {
+        "dataType": "refAlias",
+        "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"updatedAt":{"dataType":"datetime","required":true},"createdAt":{"dataType":"datetime","required":true},"errorMessage":{"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},"status":{"ref":"GenerationStatus","required":true},"promptText":{"dataType":"string","required":true},"testId":{"dataType":"double","required":true},"questionId":{"dataType":"double","required":true},"id":{"dataType":"double","required":true}},"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "GenerationTaskListResponse": {
+        "dataType": "refAlias",
+        "type": {"dataType":"array","array":{"dataType":"refAlias","ref":"GenerationTaskResponse"},"validators":{}},
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "CompetenciesResponse": {
@@ -565,6 +577,36 @@ export function RegisterRoutes(app: Router) {
 
               await templateService.apiHandler({
                 methodName: 'changeStandardAnswer',
+                controller,
+                response,
+                next,
+                validatedArgs,
+                successStatus: undefined,
+              });
+            } catch (err) {
+                return next(err);
+            }
+        });
+        // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+        const argsGenerationTasksController_list: Record<string, TsoaRoute.ParameterSchema> = {
+                testId: {"in":"path","name":"testId","required":true,"dataType":"double"},
+        };
+        app.get('/api/tests/:testId/generation-tasks/list',
+            ...(fetchMiddlewares<RequestHandler>(GenerationTasksController)),
+            ...(fetchMiddlewares<RequestHandler>(GenerationTasksController.prototype.list)),
+
+            async function GenerationTasksController_list(request: ExRequest, response: ExResponse, next: any) {
+
+            // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+
+            let validatedArgs: any[] = [];
+            try {
+                validatedArgs = templateService.getValidatedArgs({ args: argsGenerationTasksController_list, request, response });
+
+                const controller = new GenerationTasksController();
+
+              await templateService.apiHandler({
+                methodName: 'list',
                 controller,
                 response,
                 next,

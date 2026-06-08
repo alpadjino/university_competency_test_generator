@@ -316,6 +316,57 @@
 				},
 				"type": "array"
 			},
+			"GenerationTaskResponse": {
+				"properties": {
+					"updatedAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"createdAt": {
+						"type": "string",
+						"format": "date-time"
+					},
+					"errorMessage": {
+						"type": "string",
+						"nullable": true
+					},
+					"status": {
+						"$ref": "#/components/schemas/GenerationStatus"
+					},
+					"promptText": {
+						"type": "string"
+					},
+					"testId": {
+						"type": "number",
+						"format": "double"
+					},
+					"questionId": {
+						"type": "number",
+						"format": "double"
+					},
+					"id": {
+						"type": "number",
+						"format": "double"
+					}
+				},
+				"required": [
+					"updatedAt",
+					"createdAt",
+					"errorMessage",
+					"status",
+					"promptText",
+					"testId",
+					"questionId",
+					"id"
+				],
+				"type": "object"
+			},
+			"GenerationTaskListResponse": {
+				"items": {
+					"$ref": "#/components/schemas/GenerationTaskResponse"
+				},
+				"type": "array"
+			},
 			"CompetenciesResponse": {
 				"properties": {
 					"id": {
@@ -925,6 +976,38 @@
 						}
 					}
 				}
+			}
+		},
+		"/tests/{testId}/generation-tasks/list": {
+			"get": {
+				"operationId": "List",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/GenerationTaskListResponse"
+								}
+							}
+						}
+					}
+				},
+				"tags": [
+					"GenerationTasks"
+				],
+				"security": [],
+				"parameters": [
+					{
+						"in": "path",
+						"name": "testId",
+						"required": true,
+						"schema": {
+							"format": "double",
+							"type": "number"
+						}
+					}
+				]
 			}
 		},
 		"/competencies/list": {

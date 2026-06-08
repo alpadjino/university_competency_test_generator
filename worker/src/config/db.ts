@@ -1,7 +1,4 @@
 import { Sequelize } from 'sequelize';
-import dotenv from 'dotenv';
-
-dotenv.config();
 
 const databaseUrl = process.env.DATABASE_URL;
 
@@ -26,12 +23,21 @@ export const db = new Sequelize(databaseUrl, {
   },
 });
 
-export const connectDB = async () => {
-  try {
-    await db.authenticate();
-    console.log('🚀 Worker подключён к базе данных');
-  } catch (error) {
-    console.error('❌ Ошибка подключения worker к базе данных:', error);
-    process.exit(1);
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+export const connectDB = async (retries = 10, delayMs = 2000) => {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      await db.authenticate();
+      console.log('🚀 Worker подключён к базе данных');
+      return;
+    } catch (error) {
+      if (attempt === retries) {
+        console.error('❌ Ошибка подключения worker к базе данных:', error);
+        process.exit(1);
+      }
+      console.warn(`БД недоступна, повтор ${attempt}/${retries} через ${delayMs} мс…`);
+      await sleep(delayMs);
+    }
   }
 };

@@ -28,10 +28,11 @@ const STATUS_CONFIG: Record<
 interface QuestionSkeletonItemProps {
   question: QuestionEditable;
   order: number;
+  taskStatus?: GenerationStatus | null;
 }
 
-export const QuestionSkeletonItem = ({ question, order }: QuestionSkeletonItemProps) => {
-  const status = question.generationStatus ?? 'queued';
+export const QuestionSkeletonItem = ({ question, order, taskStatus }: QuestionSkeletonItemProps) => {
+  const status = taskStatus ?? question.generationStatus ?? 'queued';
   const config = STATUS_CONFIG[status === 'completed' ? 'queued' : status];
   const Icon = config.icon;
   const { typeLabel, subtypeLabel } = getTypeByCode(question.type, question.subtype);
@@ -56,7 +57,7 @@ export const QuestionSkeletonItem = ({ question, order }: QuestionSkeletonItemPr
           )}
         >
           <Icon className={cn('h-4 w-4 shrink-0', status === 'generating' && 'animate-spin')} />
-          <span>{status === 'failed' ? question.question : config.label}</span>
+          <span>{status === 'failed' && question.question ? question.question : config.label}</span>
         </div>
 
         {status !== 'failed' && (

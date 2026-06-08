@@ -2,11 +2,13 @@ import api from "@/api/axios";
 import { QuestionItem } from "@/components/question-item";
 import { QuestionSkeletonItem } from "@/components/question-skeleton-item";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import type { GenerationTask } from "@/types/generation-task";
+import { isTaskPending } from "@/types/generation-task";
 import type { QuestionCategory, QuestionEditable, QuestionOptionsDb } from "@/types/question";
 import { isQuestionFailed, isQuestionPending } from "@/types/question";
 import type { AxiosResponse } from "axios";
 import { Info } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -15,7 +17,8 @@ const POLL_INTERVAL_MS = 3000;
 export default function CreateQuestionsPage() {
   const { testId } = useParams<'testId'>();
   const [questions, setQuestions] = useState<QuestionEditable[]>([]);
-  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [tasks, setTasks] = useState<GenerationTask[]>([]);
+  const pollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchQuestions = useCallback(async () => {
     const res = await api.get<QuestionEditable[]>(`/tests/${testId}/questions/list`);
@@ -23,31 +26,77 @@ export default function CreateQuestionsPage() {
     return res.data;
   }, [testId]);
 
-  useEffect(() => {
-    fetchQuestions().catch(() => toast("Ошибка при получении вопросов"));
-  }, [fetchQuestions]);
+  const fetchTasks = useCallback(async () => {
+    const res = await api.get<GenerationTask[]>(`/tests/${testId}/generation-tasks/list`);
+    setTasks(res.data);
+    return res.data;
+  }, [testId]);
 
-  useEffect(() => {
-    const hasPending = questions.some(isQuestionPending);
+  const refreshAll = useCallback(async () => {
+    const [nextQuestions, nextTasks] = await Promise.all([fetchQuestions(), fetchTasks()]);
+    return { nextQuestions, nextTasks };
+  }, [fetchQuestions, fetchTasks]);
 
-    if (hasPending && !pollTimerRef.current) {
-      pollTimerRef.current = setInterval(() => {
-        fetchQuestions().catch(() => {});
-      }, POLL_INTERVAL_MS);
+  const taskByQuestionId = useMemo(
+    () => Object.fromEntries(tasks.map((task) => [task.questionId, task])),
+    [tasks]
+  );
+
+  const schedulePoll = useCallback(() => {
+    if (pollTimeoutRef.current) {
+      clearTimeout(pollTimeoutRef.current);
     }
 
-    if (!hasPending && pollTimerRef.current) {
-      clearInterval(pollTimerRef.current);
-      pollTimerRef.current = null;
-    }
+    pollTimeoutRef.current = setTimeout(async () => {
+      try {
+        const { nextQuestions, nextTasks } = await refreshAll();
+        const hasPending =
+          nextQuestions.some(isQuestionPending) ||
+          nextTasks.some(isTaskPending);
 
-    return () => {
-      if (pollTimerRef.current) {
-        clearInterval(pollTimerRef.current);
-        pollTimerRef.current = null;
+        if (hasPending) {
+          schedulePoll();
+        }
+      } catch {
+        schedulePoll();
+      }
+    }, POLL_INTERVAL_MS);
+  }, [refreshAll]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        const { nextQuestions, nextTasks } = await refreshAll();
+        if (cancelled) {
+          return;
+        }
+
+        const hasPending =
+          nextQuestions.some(isQuestionPending) ||
+          nextTasks.some(isTaskPending);
+
+        if (hasPending) {
+          schedulePoll();
+        }
+      } catch {
+        if (!cancelled) {
+          toast("Ошибка при получении вопросов");
+        }
       }
     };
-  }, [questions, fetchQuestions]);
+
+    load();
+
+    return () => {
+      cancelled = true;
+      if (pollTimeoutRef.current) {
+        clearTimeout(pollTimeoutRef.current);
+        pollTimeoutRef.current = null;
+      }
+    };
+  }, [refreshAll, schedulePoll]);
 
   const updateQuestion = async (id: number, newValues: Partial<QuestionEditable>) => {
     const current = questions.find((q) => q.id === id);
@@ -100,7 +149,10 @@ export default function CreateQuestionsPage() {
     }
   };
 
-  const pendingCount = questions.filter(isQuestionPending).length;
+  const pendingCount = Math.max(
+    questions.filter(isQuestionPending).length,
+    tasks.filter(isTaskPending).length
+  );
 
   return (
     <div>
@@ -111,18 +163,21 @@ export default function CreateQuestionsPage() {
           Отображаются вопросы, включенные в тест. Вопросы категории <span className="font-bold text-orange-600">В</span> могут быть отредактированы.
           {pendingCount > 0 && (
             <span className="block mt-1 text-blue-700">
-              Генерируется {pendingCount} {pendingCount === 1 ? 'вопрос' : pendingCount < 5 ? 'вопроса' : 'вопросов'} — страница обновляется автоматически.
+              Генерируется {pendingCount} {pendingCount === 1 ? 'вопрос' : pendingCount < 5 ? 'вопроса' : 'вопросов'}
             </span>
           )}
         </AlertDescription>
       </Alert>
       {questions.map((question, index) => {
-        if (isQuestionPending(question) || isQuestionFailed(question)) {
+        const task = taskByQuestionId[question.id];
+
+        if (isQuestionPending(question) || isQuestionFailed(question) || (task && isTaskPending(task))) {
           return (
             <QuestionSkeletonItem
               key={question.id}
               order={question.order ?? index + 1}
               question={question}
+              taskStatus={task?.status}
             />
           );
         }

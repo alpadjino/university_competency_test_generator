@@ -4,7 +4,7 @@ import swaggerUi from 'swagger-ui-express';
 import dotenv from "dotenv";
 
 import { connectDB } from "./config/db";
-import { runMigrations } from "./config/migrate";
+import { startBoss } from "./queue/boss";
 import { RegisterRoutes } from "./routes";
 import swaggerDocument from '../build/swagger.json';
 
@@ -18,8 +18,8 @@ async function startServer() {
   app.use(cors());
   app.use(express.json());
 
-  runMigrations();
   await connectDB();
+  await startBoss();
 
   RegisterRoutes(app);
 

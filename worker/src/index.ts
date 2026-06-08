@@ -1,28 +1,15 @@
-import dotenv from 'dotenv';
+import './config/loadEnv.js';
+
 import { connectDB } from './config/db';
-import { QuestionGenerationProcessor } from './services/QuestionGenerationProcessor';
+import { startBossWorker } from './queue/boss';
 
 import './models/index';
 
-dotenv.config();
-
-const POLL_INTERVAL_MS = Number(process.env.WORKER_POLL_INTERVAL_MS ?? 3000);
-
 async function startWorker() {
   await connectDB();
+  await startBossWorker();
 
-  console.log(`🔧 Task runner запущен (модель: ${process.env.OLLAMA_MODEL ?? 'hodza/cotype-nano-1.5-unofficial'}, интервал ${POLL_INTERVAL_MS} мс)`);
-
-  const tick = async () => {
-    try {
-      await QuestionGenerationProcessor.processQueue();
-    } catch (error) {
-      console.error('Task runner error:', error);
-    }
-  };
-
-  await tick();
-  setInterval(tick, POLL_INTERVAL_MS);
+  console.log(`🔧 Worker запущен (модель: ${process.env.OLLAMA_MODEL ?? 'hodza/cotype-nano-1.5-unofficial'})`);
 }
 
 startWorker().catch((error) => {

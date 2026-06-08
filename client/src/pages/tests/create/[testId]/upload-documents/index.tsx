@@ -136,8 +136,13 @@ export default function UploadDocsPage() {
       setSelection(s => ({ ...s, visible: false }));
       toast(`${count} ${count === 1 ? 'вопрос добавлен' : 'вопросов добавлено'} в очередь генерации`);
       navigate(`/tests/create/${testId}/questions`);
-    } catch {
-      toast('Произошла ошибка при постановке вопросов в очередь');
+    } catch (error: unknown) {
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      if (status === 404) {
+        toast('Тест не найден. Создайте новый тест в списке.');
+      } else {
+        toast('Произошла ошибка при постановке вопросов в очередь');
+      }
     } finally {
       setIsSubmitting(false);
     }

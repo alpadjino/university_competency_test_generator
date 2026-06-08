@@ -10,32 +10,36 @@ import {
 } from '../models/enums/Question';
 import { AiQuestionItem, AiQuestionResponse, IChatResponse } from '../types/ai';
 import { toDbFormat } from '../utils/toDbFormat';
-
-const MODEL_BATCH_SIZE = 5;
-const OLLAMA_URL = process.env.OLLAMA_API_URL || 'http://localhost:11434';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'hodza/cotype-nano-1.5-unofficial';
-const MAX_RETRIES_MULTIPLIER = 3;
+import { parseModelJsonResponse } from '../utils/parseModelJson';
+import { buildQuestionResponseSchema } from '../utils/questionSchemas';
+import { buildOllamaRequestOptions, ollamaConfig } from '../config/ollama';
+import type { GenerateQuestionsJobData } from '../queue/jobs';
 
 const PLACEHOLDER_GENERATING = 'Вопрос генерируется…';
 
-type TaskGroup = {
-  testId: number;
-  promptText: string;
-  type: QuestionType;
-  subtype: QuestionSubtype;
-  tasks: GenerationTask[];
-  questions: Question[];
-};
-
 export class QuestionGenerationProcessor {
-  static async processQueue(): Promise<void> {
-    const group = await this.pickNextGroup();
-    if (!group) {
+  static async processJob(data: GenerateQuestionsJobData): Promise<void> {
+    const tasks = await GenerationTask.findAll({
+      where: {
+        id: { [Op.in]: data.taskIds },
+        status: GenerationStatus.QUEUED,
+      },
+      order: [['createdAt', 'ASC']],
+    });
+
+    if (tasks.length === 0) {
       return;
     }
 
-    const taskIds = group.tasks.map((task) => task.id);
-    const questionIds = group.questions.map((question) => question.id);
+    const questions = await Question.findAll({
+      where: { id: { [Op.in]: tasks.map((task) => task.questionId) } },
+      order: [['order', 'ASC']],
+    });
+
+    const type = data.questionType as QuestionType;
+    const subtype = data.subtype as QuestionSubtype;
+    const taskIds = tasks.map((task) => task.id);
+    const questionIds = questions.map((question) => question.id);
 
     await GenerationTask.update(
       { status: GenerationStatus.GENERATING },
@@ -48,22 +52,22 @@ export class QuestionGenerationProcessor {
 
     try {
       const generated = await this.generateWithOllama(
-        group.promptText,
-        group.type,
-        group.subtype,
-        group.questions.length
+        data.promptText,
+        type,
+        subtype,
+        questions.length
       );
 
-      for (let i = 0; i < group.questions.length; i++) {
-        const question = group.questions[i];
+      for (let i = 0; i < questions.length; i++) {
+        const question = questions[i];
         const aiItem = generated[i];
 
         if (!aiItem) {
-          await this.markFailed(question.id, group.tasks[i].id, 'Не удалось сгенерировать вопрос');
+          await this.markFailed(question.id, tasks[i].id, 'Не удалось сгенерировать вопрос');
           continue;
         }
 
-        const { options, standardAnswer } = toDbFormat(aiItem, group.subtype);
+        const { options, standardAnswer } = toDbFormat(aiItem, subtype);
 
         await question.update({
           question: aiItem.question,
@@ -71,78 +75,16 @@ export class QuestionGenerationProcessor {
           standardAnswer,
           generationStatus: GenerationStatus.COMPLETED,
         });
-        await group.tasks[i].update({ status: GenerationStatus.COMPLETED });
+        await tasks[i].update({ status: GenerationStatus.COMPLETED });
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Ошибка генерации';
-      console.error('QuestionGenerationProcessor.processQueue:', error);
+      console.error('QuestionGenerationProcessor.processJob:', error);
 
-      for (let i = 0; i < group.questions.length; i++) {
-        await this.markFailed(group.questions[i].id, group.tasks[i].id, message);
+      for (let i = 0; i < questions.length; i++) {
+        await this.markFailed(questions[i].id, tasks[i].id, message);
       }
     }
-  }
-
-  private static async pickNextGroup(): Promise<TaskGroup | null> {
-    const firstTask = await GenerationTask.findOne({
-      where: { status: GenerationStatus.QUEUED },
-      order: [['createdAt', 'ASC']],
-    });
-
-    if (!firstTask) {
-      return null;
-    }
-
-    const firstQuestion = await Question.findByPk(firstTask.questionId);
-    if (!firstQuestion) {
-      return null;
-    }
-
-    const queuedTasks = await GenerationTask.findAll({
-      where: {
-        status: GenerationStatus.QUEUED,
-        testId: firstTask.testId,
-        promptText: firstTask.promptText,
-      },
-      order: [['createdAt', 'ASC']],
-      limit: 50,
-    });
-
-    const siblingTasks: GenerationTask[] = [];
-
-    for (const task of queuedTasks) {
-      const question = await Question.findByPk(task.questionId);
-      if (
-        question &&
-        question.type === firstQuestion.type &&
-        question.subtype === firstQuestion.subtype
-      ) {
-        siblingTasks.push(task);
-        if (siblingTasks.length >= MODEL_BATCH_SIZE) {
-          break;
-        }
-      }
-    }
-
-    if (siblingTasks.length === 0) {
-      return null;
-    }
-
-    const questions = await Question.findAll({
-      where: {
-        id: { [Op.in]: siblingTasks.map((task) => task.questionId) },
-      },
-      order: [['order', 'ASC']],
-    });
-
-    return {
-      testId: firstTask.testId,
-      promptText: firstTask.promptText,
-      type: firstQuestion.type,
-      subtype: firstQuestion.subtype,
-      tasks: siblingTasks,
-      questions,
-    };
   }
 
   private static async markFailed(questionId: number, taskId: number, message: string): Promise<void> {
@@ -167,35 +109,36 @@ export class QuestionGenerationProcessor {
   ): Promise<AiQuestionItem[]> {
     let finalQuestions: AiQuestionItem[] = [];
     let attempts = 0;
-    const maxAttempts = Math.ceil(count / MODEL_BATCH_SIZE) * MAX_RETRIES_MULTIPLIER;
+    const maxAttempts = Math.max(
+      ollamaConfig.minGenerationAttempts,
+      Math.ceil(count / ollamaConfig.modelBatchSize) * ollamaConfig.maxRetriesMultiplier
+    );
 
     const enrichedText = this.enrichTextWithTemplate(promptText, type, subtype);
 
     while (finalQuestions.length < count && attempts < maxAttempts) {
       attempts++;
       const neededCount = count - finalQuestions.length;
-      const currentBatchSize = Math.min(neededCount, MODEL_BATCH_SIZE);
+      const currentBatchSize = Math.min(neededCount, ollamaConfig.modelBatchSize);
       const systemInstruction = this.buildSystemPrompt(type, subtype, currentBatchSize);
+      const responseSchema = buildQuestionResponseSchema(type, subtype, currentBatchSize);
 
       const requestBody = {
-        model: OLLAMA_MODEL,
+        model: ollamaConfig.model,
         stream: false,
-        format: 'json',
+        format: responseSchema,
         messages: [
           { role: 'system', content: systemInstruction },
           { role: 'user', content: enrichedText },
         ],
-        options: {
-          temperature: 0.7,
-          seed: Math.floor(Math.random() * 1000000),
-        },
+        options: buildOllamaRequestOptions(),
       };
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3 * 60 * 1000);
+      const timeoutId = setTimeout(() => controller.abort(), ollamaConfig.requestTimeoutMs);
 
       try {
-        const response = await fetch(`${OLLAMA_URL}/api/chat`, {
+        const response = await fetch(`${ollamaConfig.apiUrl}/api/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(requestBody),
@@ -207,18 +150,23 @@ export class QuestionGenerationProcessor {
         }
 
         const chatResponse = (await response.json()) as IChatResponse;
-        let jsonContent = chatResponse?.message?.content;
+        const jsonContent = chatResponse?.message?.content;
 
         if (!jsonContent || jsonContent.trim() === '') {
           continue;
         }
 
-        jsonContent = jsonContent.replace(/```json/gi, '').replace(/```/g, '').trim();
-        const parsedData = JSON.parse(jsonContent) as AiQuestionResponse;
+        const parsedData = parseModelJsonResponse<AiQuestionResponse>(jsonContent);
 
         if (parsedData?.questions && Array.isArray(parsedData.questions)) {
           finalQuestions.push(...parsedData.questions);
+          continue;
         }
+
+        console.warn(
+          `Generation attempt ${attempts}: invalid JSON response:`,
+          jsonContent.slice(0, 120)
+        );
       } catch (error) {
         if (attempts >= maxAttempts) {
           throw error;
@@ -285,7 +233,7 @@ export class QuestionGenerationProcessor {
         jsonStructure = `{ "questions": [{ "question": "Текст утверждения с [____]", "correct_answer": "слово" }] }`;
         subTypeInstruction = `ЗАПРЕЩЕНО использовать знаки вопроса (?) и вопросительные слова.
   Твоя задача — копировать предложение из текста «как есть» и вставить [____].
-  
+
   ПРИМЕР КОРРЕКТНОГО ОТВЕТА:
   - question: "Традиционные методы ФОС имеют низкую [____] обновления материалов."
   - correct_answer: "скорость"`;
@@ -294,11 +242,13 @@ export class QuestionGenerationProcessor {
       switch (subType) {
         case ClosedQuestionSubtype.ONE:
           jsonStructure = `{ "questions": [{ "question": "Текст содержательного вопроса", "options": ["Текст правильного ответа 1", "Текст ложного ответа 1", "Текст ложного ответа 2", "Текст ложного ответа 3"], "correct_answer": "Текст правильного ответа 1" }] }`;
-          subTypeInstruction = 'Создай вопросы с выбором одного правильного ответа.';
+          subTypeInstruction =
+            'Создай вопросы с выбором одного правильного ответа (ровно 4 варианта). correct_answer ОБЯЗАН дословно совпадать с одним из элементов массива options.';
           break;
         case ClosedQuestionSubtype.MULTIPLE:
           jsonStructure = `{ "questions": [{ "question": "Текст содержательного вопроса", "options": ["Текст правильного ответа 1", "Текст правильного ответа 2", "Текст ложного ответа 1", "Текст ложного ответа 2"], "correct_answers": ["Текст правильного ответа 1", "Текст правильного ответа 2"] }] }`;
-          subTypeInstruction = 'Создай вопросы, где ОБЯЗАТЕЛЬНО БУДЕТ правильных ответов. Используй поле "correct_answers" (массив).';
+          subTypeInstruction =
+            'Создай вопросы, где ОБЯЗАТЕЛЬНО БУДЕТ несколько правильных ответов. Используй поле "correct_answers" (массив). Каждый элемент correct_answers ОБЯЗАН дословно совпадать с одним из элементов options.';
           break;
         case ClosedQuestionSubtype.MATCHING:
           jsonStructure = `{ "questions": [{ "question": "Заголовок задания", "left_column": [{ "id": "1", "text": "Элемент 1" }, { "id": "2", "text": "Элемент 2" }], "right_column": [{ "id": "А", "text": "Описание А" }, { "id": "Б", "text": "Описание Б" }], "correct_mapping": { "1": "Б", "2": "А" } }] }`;
@@ -321,6 +271,7 @@ export class QuestionGenerationProcessor {
 4. Структура JSON должна соответствовать этому шаблону:
 ${jsonStructure}
 5. Массив "questions" должен содержать ровно ${count} элементов.
-6. Язык вопросов и ответов должен совпадать с языком текста.`;
+6. Язык вопросов и ответов должен совпадать с языком текста.
+8. Дополнительно формат ответа задан JSON Schema в API — следуй ему строго.`;
   }
 }

@@ -5,9 +5,6 @@
   "main": "./src/index.ts",
   "scripts": {
     "swagger": "tsoa spec-and-routes",
-    "postinstall": "prisma generate",
-    "db:migrate": "prisma migrate deploy",
-    "db:migrate:dev": "prisma migrate dev",
     "start": "npm run swagger && nodemon --exec tsx ./src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -15,12 +12,8 @@
   "author": "",
   "license": "ISC",
   "type": "module",
-  "prisma": {
-    "schema": "schema.prisma"
-  },
   "dependencies": {
     "@openapi-contrib/json-schema-to-openapi-schema": "^4.3.1",
-    "@prisma/client": "^6.19.0",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
@@ -29,7 +22,7 @@
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.18.0",
-    "prisma": "^6.19.0",
+    "pg-boss": "^10.4.2",
     "sequelize": "^6.37.7",
     "swagger-autogen": "^2.23.7",
     "tsoa": "^7.0.0-alpha.0",
