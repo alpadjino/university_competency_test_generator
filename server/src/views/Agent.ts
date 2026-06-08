@@ -13,6 +13,13 @@ export interface GenerateQuestionsRequest {
   promptText: string;
 }
 
+export interface GenerateQuestionsEnqueueResponse {
+  questionIds: number[];
+  message: string;
+}
+
+export type GenerationStatus = 'queued' | 'generating' | 'completed' | 'failed';
+
 export type GenerateQuestionsResponse = Array<{
   testId: number;
   category: QuestionCategory;

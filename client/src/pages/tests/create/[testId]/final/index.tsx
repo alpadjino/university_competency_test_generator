@@ -3,6 +3,7 @@ import { AlertCircle } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { QuestionEditable } from '@/types/question';
+import { isQuestionPending } from '@/types/question';
 import { useParams } from 'react-router-dom';
 import api from '@/api/axios';
 import { toast } from 'sonner';
@@ -21,7 +22,7 @@ export default function CreateFinalPage() {
   }, [testId]);
 
   const filteredQuestions = useMemo(() => {
-    return questions.filter(q => q.category === "A");
+    return questions.filter(q => q.category === "A" && !isQuestionPending(q));
   }, [questions]);
 
   return (

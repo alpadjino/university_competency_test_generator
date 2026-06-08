@@ -1,0 +1,22 @@
+{
+  "name": "worker",
+  "version": "1.0.0",
+  "description": "Task runner for async question generation",
+  "main": "./src/index.ts",
+  "scripts": {
+    "start": "tsx ./src/index.ts",
+    "dev": "tsx watch ./src/index.ts"
+  },
+  "type": "module",
+  "dependencies": {
+    "dotenv": "^17.3.1",
+    "pg": "^8.18.0",
+    "sequelize": "^6.37.7",
+    "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.3",
+    "@types/pg": "^8.16.0",
+    "tsx": "^4.21.0"
+  }
+}

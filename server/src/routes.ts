@@ -108,9 +108,14 @@ const models: TsoaRoute.Models = {
         "type": {"dataType":"union","subSchemas":[{"ref":"ChoiceOptionsDb"},{"ref":"MatchingOptionsDb"},{"ref":"SequenceOptionsDb"},{"dataType":"enum","enums":[null]}],"validators":{}},
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "GenerationStatus": {
+        "dataType": "refAlias",
+        "type": {"dataType":"union","subSchemas":[{"dataType":"enum","enums":["queued"]},{"dataType":"enum","enums":["generating"]},{"dataType":"enum","enums":["completed"]},{"dataType":"enum","enums":["failed"]}],"validators":{}},
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "QuestionsGeneratedResponse": {
         "dataType": "refAlias",
-        "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"testId":{"dataType":"double","required":true},"standardAnswer":{"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},"question":{"dataType":"string","required":true},"options":{"ref":"QuestionOptionsDb","required":true},"subtype":{"dataType":"union","subSchemas":[{"ref":"ClosedQuestionSubtype"},{"ref":"OpenQuestionSubtype"}],"required":true},"type":{"ref":"QuestionType","required":true},"category":{"ref":"QuestionCategory","required":true},"text":{"dataType":"string","required":true},"id":{"dataType":"double","required":true}},"validators":{}},
+        "type": {"dataType":"nestedObjectLiteral","nestedProperties":{"generationStatus":{"dataType":"union","subSchemas":[{"ref":"GenerationStatus"},{"dataType":"enum","enums":[null]}],"required":true},"order":{"dataType":"double","required":true},"testId":{"dataType":"double","required":true},"standardAnswer":{"dataType":"union","subSchemas":[{"dataType":"string"},{"dataType":"enum","enums":[null]}],"required":true},"question":{"dataType":"string","required":true},"options":{"ref":"QuestionOptionsDb","required":true},"subtype":{"dataType":"union","subSchemas":[{"ref":"ClosedQuestionSubtype"},{"ref":"OpenQuestionSubtype"}],"required":true},"type":{"ref":"QuestionType","required":true},"category":{"ref":"QuestionCategory","required":true},"text":{"dataType":"string","required":true},"id":{"dataType":"double","required":true}},"validators":{}},
     },
     // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
     "QuestionsGeneratedListResponse": {
@@ -133,6 +138,15 @@ const models: TsoaRoute.Models = {
         "properties": {
             "name": {"dataType":"string","required":true},
             "description": {"dataType":"string","required":true},
+        },
+        "additionalProperties": false,
+    },
+    // WARNING: This file was auto-generated with tsoa. Please do not modify it. Re-run tsoa to re-generate this file: https://github.com/lukeautry/tsoa
+    "GenerateQuestionsEnqueueResponse": {
+        "dataType": "refObject",
+        "properties": {
+            "questionIds": {"dataType":"array","array":{"dataType":"double"},"required":true},
+            "message": {"dataType":"string","required":true},
         },
         "additionalProperties": false,
     },

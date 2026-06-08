@@ -1,32 +1,26 @@
-import { Model, DataTypes, Sequelize, Optional } from 'sequelize';
+import { Model, Optional, DataTypes } from 'sequelize';
+import { db } from '../config/db';
 import {
   ClosedQuestionSubtype,
   OpenQuestionSubtype,
   QuestionCategory,
   QuestionCategoryEnumModel,
   QuestionType,
-  QuestionTypeEnumModel
-} from './enums/Agent';
+  QuestionTypeEnumModel,
+} from './enums/Question';
 import { GenerationStatus, GenerationStatusEnumModel } from './enums/GenerationStatus';
-import { db } from '../config/db';
 
-export type ChoiceOptionsDb = Array<{
-  text: string;
-  isTrue: boolean;
-}>;
-
+export type ChoiceOptionsDb = Array<{ text: string; isTrue: boolean }>;
 export type MatchingOptionsDb = {
-  left: Array<{ id: string, text: string }>;
-  right: Array<{ id: string, text: string }>;
+  left: Array<{ id: string; text: string }>;
+  right: Array<{ id: string; text: string }>;
 };
-
-export type SequenceOptionsDb = Array<{ id: string, text: string }>;
-
+export type SequenceOptionsDb = Array<{ id: string; text: string }>;
 export type QuestionOptionsDb =
   | ChoiceOptionsDb
   | MatchingOptionsDb
   | SequenceOptionsDb
-  | null; // для открытых вопросов
+  | null;
 
 interface QuestionAttributes {
   id: number;
@@ -42,13 +36,14 @@ interface QuestionAttributes {
   generationStatus: GenerationStatus | null;
 }
 
-interface QuestionCreationAttributes extends Optional<QuestionAttributes, 'id' | 'generationStatus'> { }
+interface QuestionCreationAttributes extends Optional<QuestionAttributes, 'id' | 'generationStatus'> {}
 
-export class Question extends Model<QuestionAttributes, QuestionCreationAttributes> implements QuestionAttributes {
+export class Question extends Model<QuestionAttributes, QuestionCreationAttributes>
+  implements QuestionAttributes {
   declare id: number;
-  declare question: string;
   declare testId: number;
   declare text: string;
+  declare question: string;
   declare category: QuestionCategory;
   declare type: QuestionType;
   declare subtype: ClosedQuestionSubtype | OpenQuestionSubtype;
@@ -56,7 +51,7 @@ export class Question extends Model<QuestionAttributes, QuestionCreationAttribut
   declare standardAnswer: string | null;
   declare order: number;
   declare generationStatus: GenerationStatus | null;
-};
+}
 
 Question.init(
   {
@@ -69,12 +64,6 @@ Question.init(
       type: DataTypes.INTEGER,
       field: 'test_id',
       allowNull: false,
-      references: {
-        model: 'tests',
-        key: 'id',
-      },
-      onUpdate: 'CASCADE',
-      onDelete: 'CASCADE',
     },
     text: {
       type: DataTypes.TEXT,

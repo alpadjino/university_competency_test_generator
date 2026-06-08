@@ -9,7 +9,7 @@ import api from '@/api/axios';
 import { cn } from '@/lib/utils';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import type { QuestionType, OpenQuestionSubtype, ClosedQuestionSubtype } from '@/types/question';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 const SUBTYPE_OPTIONS: Record<QuestionType, Array<{ id: OpenQuestionSubtype | ClosedQuestionSubtype, label: string, desc: string }>> = {
@@ -27,6 +27,7 @@ const SUBTYPE_OPTIONS: Record<QuestionType, Array<{ id: OpenQuestionSubtype | Cl
 
 export default function UploadDocsPage() {
   const { testId } = useParams<'testId'>();
+  const navigate = useNavigate();
   const [file, setFile] = useState<File | null>(null);
   const [content, setContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -36,6 +37,8 @@ export default function UploadDocsPage() {
   const [questionCount, setQuestionCount] = useState(1);
   const [questionType, setQuestionType] = useState<QuestionType>("Closed");
   const [questionSubtype, setQuestionSubtype] = useState<OpenQuestionSubtype | ClosedQuestionSubtype>('One');
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const containerRef = useRef(null);
 
@@ -107,25 +110,37 @@ export default function UploadDocsPage() {
     });
   };
 
-  const handleGenerateQuestions = (
+  const handleGenerateQuestions = async (
     text: string,
     count: number,
     type: QuestionType = "Closed",
     subType: OpenQuestionSubtype | ClosedQuestionSubtype = "One"
   ) => {
-    api.post('/agent/generate', {
-      testId,
-      promptText: text,
-      questionsCount: count,
-      questionsType: type,
-      questionsSubType: subType
-    })
-      .then(() => {
-        setIsModalOpen(false);
-        setSelection(s => ({ ...s, visible: false }));
-        toast('Вопросы созданы.');
-      })
-      .catch(() => toast('Произошла ошибка при созданыии вопросов'));
+    if (count < 1) {
+      toast('Укажите количество вопросов');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      await api.post('/agent/generate', {
+        testId: Number(testId),
+        promptText: text,
+        questionsCount: count,
+        questionsType: type,
+        questionsSubType: subType
+      });
+
+      setIsModalOpen(false);
+      setSelection(s => ({ ...s, visible: false }));
+      toast(`${count} ${count === 1 ? 'вопрос добавлен' : 'вопросов добавлено'} в очередь генерации`);
+      navigate(`/tests/create/${testId}/questions`);
+    } catch {
+      toast('Произошла ошибка при постановке вопросов в очередь');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -345,9 +360,19 @@ export default function UploadDocsPage() {
           </div>
 
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setIsModalOpen(false)}>Отмена</Button>
-            <Button onClick={() => handleGenerateQuestions(selection.text, questionCount, questionType, questionSubtype)}>
-              Сгенерировать
+            <Button variant="ghost" onClick={() => setIsModalOpen(false)} disabled={isSubmitting}>Отмена</Button>
+            <Button
+              onClick={() => handleGenerateQuestions(selection.text, questionCount, questionType, questionSubtype)}
+              disabled={isSubmitting || questionCount < 1}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Добавление в очередь…
+                </>
+              ) : (
+                'Сгенерировать'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

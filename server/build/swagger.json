@@ -234,8 +234,29 @@
 				],
 				"nullable": true
 			},
+			"GenerationStatus": {
+				"type": "string",
+				"enum": [
+					"queued",
+					"generating",
+					"completed",
+					"failed"
+				]
+			},
 			"QuestionsGeneratedResponse": {
 				"properties": {
+					"generationStatus": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/GenerationStatus"
+							}
+						],
+						"nullable": true
+					},
+					"order": {
+						"type": "number",
+						"format": "double"
+					},
 					"testId": {
 						"type": "number",
 						"format": "double"
@@ -275,6 +296,8 @@
 					}
 				},
 				"required": [
+					"generationStatus",
+					"order",
 					"testId",
 					"standardAnswer",
 					"question",
@@ -326,6 +349,26 @@
 				"required": [
 					"name",
 					"description"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"GenerateQuestionsEnqueueResponse": {
+				"properties": {
+					"questionIds": {
+						"items": {
+							"type": "number",
+							"format": "double"
+						},
+						"type": "array"
+					},
+					"message": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"questionIds",
+					"message"
 				],
 				"type": "object",
 				"additionalProperties": false
@@ -1029,8 +1072,15 @@
 			"post": {
 				"operationId": "Generate",
 				"responses": {
-					"204": {
-						"description": "No content"
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/GenerateQuestionsEnqueueResponse"
+								}
+							}
+						}
 					}
 				},
 				"tags": [
