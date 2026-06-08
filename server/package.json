@@ -29,6 +29,7 @@
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.18.0",
+    "pg-boss": "^10.4.2",
     "prisma": "^6.19.0",
     "sequelize": "^6.37.7",
     "swagger-autogen": "^2.23.7",

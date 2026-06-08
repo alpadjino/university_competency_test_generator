@@ -188,12 +188,21 @@ export const QuestionItem = ({ question, onUpdate, order, readonly = false }: Qu
 
   // Диспетчер рендера эталонного ответа
   const renderStandardAnswerArea = () => {
-    // Для одиночного/множественного выбора эталон уже отрисован зеленой галочкой в опциях
-    if (question.subtype === "One" || question.subtype === "Multiple") return null;
+    const choiceOptions =
+      question.subtype === 'One' || question.subtype === 'Multiple'
+        ? (question.options as ChoiceOptionsDb | undefined)
+        : undefined;
+    const hasMarkedCorrectChoice = choiceOptions?.some((option) => option.isTrue) ?? false;
+
+    if (
+      (question.subtype === 'One' || question.subtype === 'Multiple') &&
+      hasMarkedCorrectChoice
+    ) {
+      return null;
+    }
 
     let displayAnswer = question.standardAnswer || '';
 
-    // Пытаемся красиво отформатировать JSON для сопоставления/последовательности, если включен Readonly
     if (isReadonlyOrBestCategory && question.standardAnswer && (question.subtype === "Matching" || question.subtype === "CorrectSequence")) {
       try {
         const parsed = JSON.parse(question.standardAnswer);
@@ -249,7 +258,6 @@ export const QuestionItem = ({ question, onUpdate, order, readonly = false }: Qu
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Блок текста вопроса */}
         <div className="bg-secondary/20 p-3 rounded-lg flex flex-col gap-2">
           <span className="font-bold text-foreground">Текст вопроса:</span>
           {isReadonlyOrBestCategory ? (

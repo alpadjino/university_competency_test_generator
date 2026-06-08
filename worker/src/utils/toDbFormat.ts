@@ -12,6 +12,7 @@ import {
   AiQuestionItem,
 } from '../types/ai';
 import { QuestionOptionsDb } from '../models/Question';
+import { reconcileMultipleChoice, reconcileOneChoice } from './reconcileAnswer';
 
 export function toDbFormat(
   aiItem: AiQuestionItem,
@@ -20,23 +21,33 @@ export function toDbFormat(
   switch (subType) {
     case ClosedQuestionSubtype.ONE: {
       const item = aiItem as AiOneQuestion;
+      const { options, correctIndex, standardAnswer } = reconcileOneChoice(
+        item.options ?? [],
+        item.correct_answer
+      );
+
       return {
-        options: item.options?.map((opt) => ({
-          text: opt,
-          isTrue: opt === item.correct_answer,
-        })) || [],
-        standardAnswer: item.correct_answer || null,
+        options: options.map((text, index) => ({
+          text,
+          isTrue: index === correctIndex,
+        })),
+        standardAnswer,
       };
     }
 
     case ClosedQuestionSubtype.MULTIPLE: {
       const item = aiItem as AiMultipleQuestion;
+      const { options, correctIndices, standardAnswer } = reconcileMultipleChoice(
+        item.options ?? [],
+        item.correct_answers
+      );
+
       return {
-        options: item.options?.map((opt) => ({
-          text: opt,
-          isTrue: item.correct_answers?.includes(opt) || false,
-        })) || [],
-        standardAnswer: item.correct_answers ? JSON.stringify(item.correct_answers) : null,
+        options: options.map((text, index) => ({
+          text,
+          isTrue: correctIndices.has(index),
+        })),
+        standardAnswer,
       };
     }
 
