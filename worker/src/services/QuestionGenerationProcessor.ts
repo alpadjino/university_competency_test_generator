@@ -13,7 +13,7 @@ import { toDbFormat } from '../utils/toDbFormat';
 
 const MODEL_BATCH_SIZE = 5;
 const OLLAMA_URL = process.env.OLLAMA_API_URL || 'http://localhost:11434';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen2.5:1.5b';
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'hodza/cotype-nano-1.5-unofficial';
 const MAX_RETRIES_MULTIPLIER = 3;
 
 const PLACEHOLDER_GENERATING = 'Вопрос генерируется…';

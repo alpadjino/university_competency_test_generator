@@ -34,7 +34,7 @@ services:
     container_name: diplom_worker
     environment:
       OLLAMA_API_URL: http://ollama:11434
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:1.5b}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-hodza/cotype-nano-1.5-unofficial}
       DATABASE_URL: postgres://user:password@db:5432/diplom_db
       WORKER_POLL_INTERVAL_MS: ${WORKER_POLL_INTERVAL_MS:-3000}
     volumes:
@@ -67,7 +67,7 @@ services:
     ports:
       - "11434:11434"
     environment:
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:1.5b}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-hodza/cotype-nano-1.5-unofficial}
     volumes:
       - ollama-data:/root/.ollama
     entrypoint: /bin/sh

@@ -11,7 +11,7 @@ const POLL_INTERVAL_MS = Number(process.env.WORKER_POLL_INTERVAL_MS ?? 3000);
 async function startWorker() {
   await connectDB();
 
-  console.log(`🔧 Task runner запущен (модель: ${process.env.OLLAMA_MODEL ?? 'qwen2.5:1.5b'}, интервал ${POLL_INTERVAL_MS} мс)`);
+  console.log(`🔧 Task runner запущен (модель: ${process.env.OLLAMA_MODEL ?? 'hodza/cotype-nano-1.5-unofficial'}, интервал ${POLL_INTERVAL_MS} мс)`);
 
   const tick = async () => {
     try {
