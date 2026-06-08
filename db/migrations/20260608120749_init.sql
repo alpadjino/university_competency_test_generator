@@ -1,3 +1,4 @@
+-- migrate:up
 CREATE TYPE "question_category" AS ENUM ('A', 'B', 'C');
 
 CREATE TYPE "question_type" AS ENUM ('Closed', 'Open');
@@ -12,7 +13,6 @@ CREATE TABLE "competencies" (
     "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT NOT NULL,
-
     CONSTRAINT "competencies_pkey" PRIMARY KEY ("id")
 );
 
@@ -24,7 +24,6 @@ CREATE TABLE "tests" (
     "created_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "files" TEXT[],
-
     CONSTRAINT "tests_pkey" PRIMARY KEY ("id")
 );
 
@@ -39,7 +38,6 @@ CREATE TABLE "questions" (
     "standard_answer" TEXT,
     "order" INTEGER NOT NULL,
     "options" JSONB,
-
     CONSTRAINT "questions_pkey" PRIMARY KEY ("id")
 );
 
@@ -48,15 +46,13 @@ CREATE TABLE "question_options" (
     "question_id" INTEGER,
     "text" TEXT NOT NULL,
     "is_true" BOOLEAN NOT NULL DEFAULT false,
-
     CONSTRAINT "question_options_pkey" PRIMARY KEY ("id")
 );
 
 CREATE TABLE "test_competencies" (
     "test_id" INTEGER NOT NULL,
     "competency_id" INTEGER NOT NULL,
-
-    CONSTRAINT "test_competencies_pkey" PRIMARY KEY ("test_id","competency_id")
+    CONSTRAINT "test_competencies_pkey" PRIMARY KEY ("test_id", "competency_id")
 );
 
 CREATE TABLE "users" (
@@ -64,18 +60,43 @@ CREATE TABLE "users" (
     "username" TEXT NOT NULL,
     "password_hash" TEXT NOT NULL,
     "role" "user_role" NOT NULL DEFAULT 'viewer',
-
     CONSTRAINT "users_pkey" PRIMARY KEY ("id")
 );
 
 CREATE UNIQUE INDEX "competencies_name_key" ON "competencies"("name");
-
 CREATE UNIQUE INDEX "users_username_key" ON "users"("username");
 
-ALTER TABLE "questions" ADD CONSTRAINT "questions_test_id_fkey" FOREIGN KEY ("test_id") REFERENCES "tests"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "questions"
+    ADD CONSTRAINT "questions_test_id_fkey"
+    FOREIGN KEY ("test_id") REFERENCES "tests"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
-ALTER TABLE "question_options" ADD CONSTRAINT "question_options_question_id_fkey" FOREIGN KEY ("question_id") REFERENCES "questions"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "question_options"
+    ADD CONSTRAINT "question_options_question_id_fkey"
+    FOREIGN KEY ("question_id") REFERENCES "questions"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
-ALTER TABLE "test_competencies" ADD CONSTRAINT "test_competencies_test_id_fkey" FOREIGN KEY ("test_id") REFERENCES "tests"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "test_competencies"
+    ADD CONSTRAINT "test_competencies_test_id_fkey"
+    FOREIGN KEY ("test_id") REFERENCES "tests"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
-ALTER TABLE "test_competencies" ADD CONSTRAINT "test_competencies_competency_id_fkey" FOREIGN KEY ("competency_id") REFERENCES "competencies"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "test_competencies"
+    ADD CONSTRAINT "test_competencies_competency_id_fkey"
+    FOREIGN KEY ("competency_id") REFERENCES "competencies"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- migrate:down
+ALTER TABLE "test_competencies" DROP CONSTRAINT IF EXISTS "test_competencies_competency_id_fkey";
+ALTER TABLE "test_competencies" DROP CONSTRAINT IF EXISTS "test_competencies_test_id_fkey";
+ALTER TABLE "question_options" DROP CONSTRAINT IF EXISTS "question_options_question_id_fkey";
+ALTER TABLE "questions" DROP CONSTRAINT IF EXISTS "questions_test_id_fkey";
+
+DROP TABLE IF EXISTS "users";
+DROP TABLE IF EXISTS "test_competencies";
+DROP TABLE IF EXISTS "question_options";
+DROP TABLE IF EXISTS "questions";
+DROP TABLE IF EXISTS "tests";
+DROP TABLE IF EXISTS "competencies";
+
+DROP TYPE IF EXISTS "user_role";
+DROP TYPE IF EXISTS "test_status";
+DROP TYPE IF EXISTS "question_subtype";
+DROP TYPE IF EXISTS "question_type";
+DROP TYPE IF EXISTS "question_category";

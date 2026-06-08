@@ -13,6 +13,24 @@ services:
       timeout: 5s
       retries: 10
       start_period: 5s
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - diplom_net
+
+  dbmate:
+    image: ghcr.io/amacneil/dbmate:2
+    container_name: diplom_dbmate
+    restart: "no"
+    environment:
+      DATABASE_URL: postgres://user:password@db:5432/diplom_db?sslmode=disable
+      DBMATE_MIGRATIONS_DIR: /db/migrations
+    volumes:
+      - ./db/migrations:/db/migrations:ro
+    command: ["--wait", "up"]
+    depends_on:
+      db:
+        condition: service_healthy
     networks:
       - diplom_net
 
@@ -29,6 +47,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      dbmate:
+        condition: service_completed_successfully
     networks:
       - diplom_net
 
@@ -47,6 +67,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      dbmate:
+        condition: service_completed_successfully
       ollama:
         condition: service_started
     networks:

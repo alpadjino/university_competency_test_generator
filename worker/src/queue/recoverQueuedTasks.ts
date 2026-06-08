@@ -38,6 +38,12 @@ export async function recoverQueuedTasks(boss: PgBoss): Promise<void> {
   const tasks = await GenerationTask.findAll({
     where: { status: GenerationStatus.QUEUED },
     order: [['createdAt', 'ASC']],
+  }).catch((error: unknown) => {
+    if ((error as { parent?: { code?: string } })?.parent?.code === '42P01') {
+      console.warn('Таблица generation_tasks не найдена, восстановление пропущено');
+      return [];
+    }
+    throw error;
   });
 
   if (tasks.length === 0) {
